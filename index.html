@@ -1,2 +1,151 @@
-# Obra-no-controle
-Sistema de gestão de obras e financeiro
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obra no Controle</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#20242b;font-family:Arial,sans-serif}
+header{background:#20242b;color:white;padding:24px 18px}
+header h1{margin:0;font-size:25px}
+header p{color:#d7d7d7;margin-bottom:0}
+main{max-width:850px;margin:auto;padding:16px}
+.card{background:white;padding:18px;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px #0000000b}
+h2{font-size:19px;margin-top:0}
+label{display:block;font-size:14px;margin:12px 0 5px}
+input,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;background:white}
+button{border:0;border-radius:8px;padding:13px;background:#d5a642;color:#171717;font-weight:bold;font-size:15px;cursor:pointer;margin-top:14px;width:100%}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:#f8f5ed;padding:13px;border-radius:9px;overflow-wrap:anywhere}
+.metric span{font-size:12px;color:#666;display:block}
+.metric strong{display:block;font-size:19px;margin-top:6px}
+.small{font-size:13px;color:#666}
+.item{border-top:1px solid #eee;padding:12px 0}
+.danger{background:#eee;color:#333;padding:7px;width:auto;margin:0 0 0 8px}
+@media(max-width:430px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:16px}}
+</style>
+</head>
+<body>
+<header>
+<h1>OBRA NO CONTROLE</h1>
+<p>Gestão de obras, equipe e financeiro</p>
+</header>
+<main>
+<section class="card">
+<h2>Resumo financeiro</h2>
+<div class="grid">
+<div class="metric"><span>Valor do contrato</span><strong id="contrato">R$ 0,00</strong></div>
+<div class="metric"><span>Lucro planejado (10%)</span><strong id="lucro">R$ 0,00</strong></div>
+<div class="metric"><span>Despesas registradas</span><strong id="despesas">R$ 0,00</strong></div>
+<div class="metric"><span>Pagamentos recebidos</span><strong id="recebido">R$ 0,00</strong></div>
+</div>
+<p class="small">Este resumo considera os dados cadastrados neste aparelho.</p>
+</section>
+
+<section class="card">
+<h2>Cadastrar obra</h2>
+<label>Nome da obra</label>
+<input id="nome" placeholder="Ex.: Casa do cliente">
+<label>Valor total do contrato (R$)</label>
+<input id="valor" type="number" min="0" step="0.01" placeholder="100000">
+<label>Área construída (m²)</label>
+<input id="area" type="number" min="0" step="0.01" placeholder="100">
+<label>Prazo previsto (meses)</label>
+<input id="prazo" type="number" min="1" step="1" placeholder="8">
+<button onclick="adicionarObra()">Cadastrar obra</button>
+</section>
+
+<section class="card">
+<h2>Equipe e custo mensal</h2>
+<div class="grid">
+<div><label>Quantidade de pedreiros</label><input id="pedreiros" type="number" min="0" value="2"></div>
+<div><label>Diária por pedreiro (R$)</label><input id="diariaP" type="number" min="0" value="200"></div>
+<div><label>Quantidade de serventes</label><input id="serventes" type="number" min="0" value="2"></div>
+<div><label>Diária por servente (R$)</label><input id="diariaS" type="number" min="0" value="130"></div>
+</div>
+<p><b>Custo estimado para 22 dias:</b> <strong id="equipe">R$ 0,00</strong></p>
+<button onclick="calcularEquipe()">Calcular equipe</button>
+</section>
+
+<section class="card">
+<h2>Registrar despesa extra</h2>
+<label>Descrição</label>
+<input id="desc" placeholder="Ex.: Ferramentas, material inesperado">
+<label>Valor (R$)</label>
+<input id="despesaValor" type="number" min="0" step="0.01" placeholder="250">
+<button onclick="adicionarDespesa()">Salvar despesa</button>
+</section>
+
+<section class="card">
+<h2>Registrar pagamento recebido</h2>
+<label>Descrição do pagamento</label>
+<input id="pagDesc" placeholder="Ex.: Entrada do contrato">
+<label>Valor recebido (R$)</label>
+<input id="pagValor" type="number" min="0" step="0.01" placeholder="5000">
+<button onclick="adicionarPagamento()">Salvar recebimento</button>
+</section>
+
+<section class="card">
+<h2>Obras cadastradas</h2>
+<div id="listaObras"><p class="small">Nenhuma obra cadastrada ainda.</p></div>
+</section>
+
+<section class="card">
+<h2>Movimentações financeiras</h2>
+<div id="movimentos"><p class="small">Nenhuma movimentação registrada.</p></div>
+</section>
+</main>
+<script>
+const chave="obraNoControleV1";
+let dados;
+try{dados=JSON.parse(localStorage.getItem(chave))||{obras:[],despesas:[],pagamentos:[]}}
+catch(e){dados={obras:[],despesas:[],pagamentos:[]}}
+const dinheiro=n=>Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const campo=id=>document.getElementById(id);
+function salvar(){localStorage.setItem(chave,JSON.stringify(dados));renderizar()}
+function adicionarObra(){
+const nome=campo("nome").value.trim(),valor=Number(campo("valor").value),area=Number(campo("area").value),prazo=Number(campo("prazo").value);
+if(!nome||valor<=0||prazo<=0){alert("Preencha o nome, o valor do contrato e o prazo.");return}
+dados.obras.push({id:Date.now(),nome,valor,area,prazo});
+["nome","valor","area","prazo"].forEach(id=>campo(id).value="");
+salvar()
+}
+function calcularEquipe(){
+const total=(Number(campo("pedreiros").value)*Number(campo("diariaP").value)+Number(campo("serventes").value)*Number(campo("diariaS").value))*22;
+campo("equipe").textContent=dinheiro(total)
+}
+function adicionarDespesa(){
+const desc=campo("desc").value.trim(),valor=Number(campo("despesaValor").value);
+if(!desc||valor<=0){alert("Informe a descrição e um valor válido.");return}
+dados.despesas.push({id:Date.now(),desc,valor,data:new Date().toLocaleDateString("pt-BR")});
+campo("desc").value="";campo("despesaValor").value="";salvar()
+}
+function adicionarPagamento(){
+const desc=campo("pagDesc").value.trim(),valor=Number(campo("pagValor").value);
+if(!desc||valor<=0){alert("Informe a descrição e um valor válido.");return}
+dados.pagamentos.push({id:Date.now(),desc,valor,data:new Date().toLocaleDateString("pt-BR")});
+campo("pagDesc").value="";campo("pagValor").value="";salvar()
+}
+function remover(tipo,id){
+if(!confirm("Deseja excluir este registro?"))return;
+dados[tipo]=dados[tipo].filter(x=>x.id!==id);salvar()
+}
+function renderizar(){
+const contrato=dados.obras.reduce((s,x)=>s+x.valor,0);
+const despesas=dados.despesas.reduce((s,x)=>s+x.valor,0);
+const recebido=dados.pagamentos.reduce((s,x)=>s+x.valor,0);
+campo("contrato").textContent=dinheiro(contrato);
+campo("lucro").textContent=dinheiro(contrato*.1);
+campo("despesas").textContent=dinheiro(despesas);
+campo("recebido").textContent=dinheiro(recebido);
+campo("listaObras").innerHTML=dados.obras.length?dados.obras.map(x=>`<div class="item"><b>${escapar(x.nome)}</b><p>${dinheiro(x.valor)} · ${x.area||0} m² · ${x.prazo} meses</p><button class="danger" onclick="remover('obras',${x.id})">Excluir</button></div>`).join(""):"<p class='small'>Nenhuma obra cadastrada ainda.</p>";
+const todos=[...dados.despesas.map(x=>({...x,tipo:"despesas",rotulo:"Despesa"})),...dados.pagamentos.map(x=>({...x,tipo:"pagamentos",rotulo:"Recebimento"}))].sort((a,b)=>b.id-a.id);
+campo("movimentos").innerHTML=todos.length?todos.map(x=>`<div class="item"><b>${x.rotulo}: ${escapar(x.desc)}</b><p>${x.data} · ${dinheiro(x.valor)}</p><button class="danger" onclick="remover('${x.tipo}',${x.id})">Excluir</button></div>`).join(""):"<p class='small'>Nenhuma movimentação registrada.</p>";
+}
+function escapar(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+calcularEquipe();renderizar();
+</script>
+</body>
+</html>
